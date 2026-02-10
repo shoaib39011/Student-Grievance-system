@@ -170,16 +170,13 @@ def signup():
         mail.send(msg)
 
     except Exception as e:
-        # If email fails, rollback user creation to keep DB clean if it was new
-        try:
-             if new_user:
-                db.session.delete(new_user)
-                db.session.commit()
-        except:
-            pass
-
         print(f"EMAIL ERROR: {str(e)}") # Log for Render
-        return jsonify({"message": f"Failed to send email. Error: {str(e)}"}), 500
+        # If email fails, don't block the user. Return 200 but include the OTP for manual entry.
+        return jsonify({
+            "message": "Verification code generated, but email delivery failed. Use this code to proceed.", 
+            "dev_otp": otp,
+            "email_error": str(e)
+        }), 200
 
     return jsonify({"message": "OTP sent to your email!"}), 200
 
