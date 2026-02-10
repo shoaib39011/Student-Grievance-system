@@ -20,12 +20,15 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///grievance_system.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Mail
-app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com').strip()
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True') == 'True'
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', 'demo@gmail.com')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', 'demo_password')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'support@kluniversity.in')
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').strip().upper() == 'TRUE'
+app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL', 'False').strip().upper() == 'TRUE'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', 'demo@gmail.com').strip()
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', 'demo_password').strip()
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', app.config.get('MAIL_USERNAME')).strip()
+
+print(f" * Mail Server: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']} (TLS: {app.config['MAIL_USE_TLS']}, SSL: {app.config['MAIL_USE_SSL']})")
 
 mail = Mail(app)
 db = SQLAlchemy(app)
