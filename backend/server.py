@@ -155,7 +155,14 @@ def signup():
 
     db.session.commit()
 
-    # 6. Send Email
+    # 6. Send Email in Background Thread to avoid Timeouts
+    def send_async_email(app, msg):
+        with app.app_context():
+            try:
+                mail.send(msg)
+            except Exception as e:
+                print(f"ASYNC EMAIL ERROR: {str(e)}")
+
     try:
         # Check if Email Config is Default/Missing -> Use Simulation Mode
         if app.config['MAIL_USERNAME'] == 'demo@gmail.com' or not app.config['MAIL_USERNAME']:
@@ -167,18 +174,18 @@ def signup():
 
         msg = Message('Your OTP Code', recipients=[email])
         msg.body = f"Your verification code is: {otp}\n\nValid for {OTP_EXPIRY_MINUTES} minutes."
-        mail.send(msg)
+        
+        import threading
+        thread = threading.Thread(target=send_async_email, args=(app, msg))
+        thread.start()
 
     except Exception as e:
-        print(f"EMAIL ERROR: {str(e)}") # Log for Render
-        # If email fails, don't block the user. Return 200 but include the OTP for manual entry.
-        return jsonify({
-            "message": "Verification code generated, but email delivery failed. Use this code to proceed.", 
-            "dev_otp": otp,
-            "email_error": str(e)
-        }), 200
+        print(f"THREAD ERROR: {str(e)}")
 
-    return jsonify({"message": "OTP sent to your email!"}), 200
+    return jsonify({
+        "message": "OTP has been generated! Check your email (including spam) or wait a moment.",
+        "dev_otp": otp # Including for manual proceed if email is delayed
+    }), 200
 
 
 @app.route('/api/verify-otp', methods=['POST'])
