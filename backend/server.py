@@ -138,12 +138,31 @@ def signup():
 
     # 6. Send Email
     try:
-        msg = Message("Your Verification Code - UniGrievance", recipients=[email])
-        msg.body = f"Your Verification Code is: {otp}\n\nValid for {OTP_EXPIRY_MINUTES} minutes.\nDo not share this with anyone."
+        # Check if Email Config is Default/Missing -> Use Simulation Mode
+        if app.config['MAIL_USERNAME'] == 'demo@gmail.com' or not app.config['MAIL_USERNAME']:
+            print(f"SIMULATION MODE: Email not configured. OTP for {email} is {otp}")
+            return jsonify({
+                "message": "SIMULATION MODE: Email not sent (Config missing). Check console/logs for OTP.", 
+                "dev_otp": otp
+            }), 200
+
+        msg = Message('Your OTP Code', recipients=[email])
+        msg.body = f"Your verification code is: {otp}\n\nValid for {OTP_EXPIRY_MINUTES} minutes."
         mail.send(msg)
+
     except Exception as e:
-        print(f"Failed to send email: {e}")
-        return jsonify({"message": "OTP Sent (check email or spam)", "dev_otp": otp}), 200
+        # If email fails, rollback user creation to keep DB clean
+        try:
+            # new_user might be defined in local scope if block executed
+            if 'new_user' in locals():
+                db.session.delete(new_user)
+                db.session.commit()
+        except:
+            pass
+
+        print(f"EMAIL ERROR: {str(e)}") # Log for Render
+        # Return 500 but include detailed error for debugging
+        return jsonify({"message": f"Failed to send email. Error: {str(e)}"}), 500
 
     return jsonify({"message": "OTP sent to your email!"}), 200
 
