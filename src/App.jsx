@@ -110,8 +110,19 @@ const NotificationModal = ({ notification, onClose }) => {
     );
 };
 
-const CalendarSidebar = ({ onDateSelect, onFilterSelect, activeFilter }) => {
+const CalendarSidebar = ({ onFilterSelect, activeFilter, onHoverChange, onDateSelect }) => {
     const [isHovered, setIsHovered] = useState(false);
+
+    useEffect(() => {
+        if (onHoverChange) onHoverChange(isHovered);
+    }, [isHovered, onHoverChange]);
+
+    const filters = [
+        { id: 'all', label: 'All Issues', icon: <BookOpen size={20} />, color: '#6366f1' },
+        { id: 'forwarded', label: 'Forwarded', icon: <ArrowRight size={20} />, color: '#10b981' },
+        { id: 'reverted', label: 'Reverted', icon: <Activity size={20} />, color: '#f59e0b' },
+    ];
+
     const dates = Array.from({ length: 7 }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - i);
@@ -123,61 +134,70 @@ const CalendarSidebar = ({ onDateSelect, onFilterSelect, activeFilter }) => {
             className="glass-panel"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            initial={{ width: '68px' }}
-            animate={{ width: isHovered ? '240px' : '68px' }}
+            initial={{ width: '80px' }}
+            animate={{ width: isHovered ? '260px' : '80px' }}
+            transition={{ type: 'spring', stiffness: 200, damping: 25 }}
             style={{
                 padding: '2rem 0.75rem', height: '100vh', position: 'fixed', top: 0, left: 0,
                 display: 'flex', flexDirection: 'column', gap: '2rem', overflow: 'hidden',
-                zIndex: 100, transition: 'width 0.3s ease', borderRadius: 0, borderLeft: 'none', borderTop: 'none', borderBottom: 'none'
+                zIndex: 100, borderRadius: 0, borderRight: '1px solid rgba(255,255,255,0.1)'
             }}
         >
-            {/* Quick Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '0.8rem', marginBottom: '1rem' }}>
+                <Shield size={32} color="white" />
+                <motion.h3 animate={{ opacity: isHovered ? 1 : 0 }} style={{ whiteSpace: 'nowrap' }}>Consoles</motion.h3>
+            </div>
+
             <div>
-                <motion.h4 animate={{ opacity: isHovered ? 0.7 : 0 }} style={{ marginBottom: '1rem', fontSize: '0.75rem', textTransform: 'uppercase', whiteSpace: 'nowrap', paddingLeft: '0.5rem' }}>
-                    {isHovered ? 'Quick Filters' : ''}
+                <motion.h4 animate={{ opacity: isHovered ? 0.6 : 0.3 }} style={{ marginBottom: '1rem', fontSize: '0.7rem', textTransform: 'uppercase', paddingLeft: '1rem' }}>
+                    {isHovered ? 'Quick Filters' : '•••'}
                 </motion.h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <button onClick={() => onFilterSelect('all')} className={`nav-btn ${activeFilter === 'all' ? 'active' : ''}`} title="All Issues">
-                        <BookOpen size={20} /> <motion.span animate={{ opacity: isHovered ? 1 : 0, width: isHovered ? 'auto' : 0 }} style={{ overflow: 'hidden', whiteSpace: 'nowrap', marginLeft: '10px', fontSize: '0.9rem' }}>All Issues</motion.span>
-                    </button>
-                    <button onClick={() => onFilterSelect('forwarded')} className={`nav-btn ${activeFilter === 'forwarded' ? 'active' : ''}`} title="Forwarded">
-                        <ArrowRight size={20} /> <motion.span animate={{ opacity: isHovered ? 1 : 0, width: isHovered ? 'auto' : 0 }} style={{ overflow: 'hidden', whiteSpace: 'nowrap', marginLeft: '10px', fontSize: '0.9rem' }}>Forwarded</motion.span>
-                    </button>
-                    <button onClick={() => onFilterSelect('reverted')} className={`nav-btn ${activeFilter === 'reverted' ? 'active' : ''}`} title="Reverted">
-                        <Activity size={20} /> <motion.span animate={{ opacity: isHovered ? 1 : 0, width: isHovered ? 'auto' : 0 }} style={{ overflow: 'hidden', whiteSpace: 'nowrap', marginLeft: '10px', fontSize: '0.9rem' }}>Reverted</motion.span>
-                    </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {filters.map(f => (
+                        <button
+                            key={f.id}
+                            onClick={() => onFilterSelect(f.id)}
+                            className={`nav-btn ${activeFilter === f.id ? 'active' : ''}`}
+                            style={{
+                                display: 'flex', alignItems: 'center', padding: '0.75rem', borderRadius: '1rem',
+                                width: '100%', border: activeFilter === f.id ? `1px solid ${f.color}` : '1px solid transparent'
+                            }}
+                        >
+                            <div style={{
+                                minWidth: '40px', display: 'flex', justifyContent: 'center',
+                                color: activeFilter === f.id ? 'white' : f.color,
+                                filter: activeFilter === f.id ? `drop-shadow(0 0 5px ${f.color})` : 'none'
+                            }}>
+                                {f.icon}
+                            </div>
+                            <AnimatePresence>
+                                {isHovered && (
+                                    <motion.span
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -10 }}
+                                        style={{ whiteSpace: 'nowrap', marginLeft: '8px' }}
+                                    >
+                                        {f.label}
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
+                        </button>
+                    ))}
                 </div>
             </div>
 
-            {/* Date Calendar */}
-            <div>
-                <motion.h4 animate={{ opacity: isHovered ? 0.7 : 0 }} style={{ marginBottom: '1rem', fontSize: '0.75rem', textTransform: 'uppercase', whiteSpace: 'nowrap', paddingLeft: '0.5rem' }}>
-                    {isHovered ? 'Timeline' : ''}
+            <div style={{ marginTop: 'auto' }}>
+                <motion.h4 animate={{ opacity: isHovered ? 0.6 : 0.3 }} style={{ marginBottom: '1rem', fontSize: '0.7rem', textTransform: 'uppercase', paddingLeft: '1rem' }}>
+                    {isHovered ? 'Recent Timeline' : '---'}
                 </motion.h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {dates.map(date => {
-                        const dateStr = date.toLocaleDateString();
-                        const isToday = date.toDateString() === new Date().toDateString();
-                        return (
-                            <motion.div
-                                key={dateStr}
-                                whileHover={{ x: 5, backgroundColor: 'rgba(255,255,255,0.1)' }}
-                                onClick={() => onDateSelect(date)}
-                                title={dateStr}
-                                style={{
-                                    padding: '0.5rem', borderRadius: '0.5rem', cursor: 'pointer',
-                                    borderLeft: activeFilter === dateStr ? '3px solid #818cf8' : '3px solid transparent',
-                                    display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: isHovered ? 'flex-start' : 'center'
-                                }}
-                            >
-                                <div style={{ fontSize: '0.8rem', fontWeight: 'bold', width: '20px', textAlign: 'center' }}>{date.getDate()}</div>
-                                <motion.span animate={{ opacity: isHovered ? 1 : 0, width: isHovered ? 'auto' : 0 }} style={{ fontSize: '0.85rem', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                    {isToday ? 'Today' : date.toLocaleDateString(undefined, { weekday: 'short' })}
-                                </motion.span>
-                                {isToday && isHovered && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', marginLeft: 'auto' }}></div>}
-                            </motion.div>
-                        );
-                    })}
+                    {dates.slice(0, 5).map((d, i) => (
+                        <div key={i} onClick={() => onDateSelect(d)} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.03)', cursor: 'pointer' }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6366f1', border: '2px solid rgba(255,255,255,0.2)' }}></div>
+                            {isHovered && <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>}
+                        </div>
+                    ))}
                 </div>
             </div>
         </motion.div>
@@ -574,6 +594,7 @@ const StudentDashboard = ({ user, grievances, onRaise }) => {
 const CoordinatorDashboard = ({ user, grievances, onUpdateStatus }) => {
     const [filter, setFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState(null);
+    const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
     // Refresh Mock
     const handleRefresh = () => {
@@ -609,9 +630,15 @@ const CoordinatorDashboard = ({ user, grievances, onUpdateStatus }) => {
                 activeFilter={dateFilter ? dateFilter.toLocaleDateString() : filter}
                 onDateSelect={(d) => { setDateFilter(d); setFilter('date'); }}
                 onFilterSelect={(f) => { setFilter(f); setDateFilter(null); }}
+                onHoverChange={setSidebarExpanded}
             />
 
-            <div className="flex-1" style={{ marginLeft: '240px', padding: '2rem', transition: 'all 0.3s ease' }}>
+            <motion.div
+                className="flex-1"
+                animate={{ marginLeft: sidebarExpanded ? '260px' : '80px' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                style={{ padding: '2rem' }}
+            >
                 <div className="flex justify-between items-center mb-6">
                     <div>
                         <h1 className="text-2xl font-bold">{user.department} Console</h1>
@@ -647,7 +674,7 @@ const CoordinatorDashboard = ({ user, grievances, onUpdateStatus }) => {
                         </div>
                     )}
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 };
@@ -656,6 +683,7 @@ const CoordinatorDashboard = ({ user, grievances, onUpdateStatus }) => {
 const AdminDashboard = ({ grievances, onUpdateStatus }) => {
     const [filter, setFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState(null);
+    const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
     const handleRefresh = () => { setFilter('all'); setDateFilter(null); alert("Data Refreshed"); };
 
@@ -680,9 +708,15 @@ const AdminDashboard = ({ grievances, onUpdateStatus }) => {
                 activeFilter={dateFilter ? dateFilter.toLocaleDateString() : filter}
                 onDateSelect={(d) => { setDateFilter(d); setFilter('date'); }}
                 onFilterSelect={(f) => { setFilter(f); setDateFilter(null); }}
+                onHoverChange={setSidebarExpanded}
             />
 
-            <div className="flex-1" style={{ marginLeft: '240px', padding: '2rem', transition: 'all 0.3s ease' }}>
+            <motion.div
+                className="flex-1"
+                animate={{ marginLeft: sidebarExpanded ? '260px' : '80px' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                style={{ padding: '2rem' }}
+            >
                 <div className="flex justify-between items-center mb-6">
                     <div>
                         <h1 className="text-2xl font-bold">Central Admin Console</h1>
@@ -722,7 +756,7 @@ const AdminDashboard = ({ grievances, onUpdateStatus }) => {
                         {resolved.map(g => <GrievanceCard key={g.id} g={g} onUpdateStatus={onUpdateStatus} role="admin" />)}
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 };
