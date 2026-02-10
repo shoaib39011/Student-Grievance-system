@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
     AlertCircle, CheckCircle, Clock, ChevronRight, Send,
     LogOut, User, Shield, BookOpen, CreditCard, Activity,
-    ArrowRight, Users, Briefcase
+    ArrowRight, Users, Briefcase, X, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -72,6 +72,43 @@ const StatusBadge = ({ status }) => {
     else className += "badge-pending";
     return <span className={className}>{label}</span>;
 }
+
+const NotificationModal = ({ notification, onClose }) => {
+    if (!notification) return null;
+    const isError = notification.type === 'error';
+    const isOtp = notification.type === 'otp';
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="modal-overlay">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="glass-panel modal-content">
+                <button className="close-btn" onClick={onClose}><X size={20} /></button>
+                <div className="text-center">
+                    <div className={`icon-circle ${notification.type}`}>
+                        {notification.type === 'success' && <CheckCircle size={32} color="#10b981" />}
+                        {notification.type === 'error' && <AlertCircle size={32} color="#ef4444" />}
+                        {notification.type === 'otp' && <Shield size={32} color="#6366f1" />}
+                    </div>
+                    <h2 style={{ marginBottom: '1rem' }}>{notification.title}</h2>
+                    <p style={{ color: '#cbd5e1', marginBottom: '1.5rem', lineHeight: '1.6' }}>{notification.message}</p>
+
+                    {isOtp && (
+                        <div className="otp-display">
+                            <span className="otp-code">{notification.otp}</span>
+                            <button className="copy-btn" onClick={() => {
+                                navigator.clipboard.writeText(notification.otp);
+                                alert("Copied to clipboard!");
+                            }}><Copy size={16} /></button>
+                        </div>
+                    )}
+
+                    <button className={`btn-primary ${notification.type}`} onClick={onClose}>
+                        {isOtp ? "Got it, Continue" : "Dismiss"}
+                    </button>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+};
 
 const CalendarSidebar = ({ onDateSelect, onFilterSelect, activeFilter }) => {
     const [isHovered, setIsHovered] = useState(false);
@@ -177,7 +214,7 @@ function App() {
             history: [{ action: 'raised', date: new Date().toISOString() }]
         };
         setGrievances([params, ...grievances]);
-        alert("Grievance Token Raised Successfully!");
+        setNotification({ type: 'success', title: 'Token Generated!', message: `Grievance ${params.id} has been logged. You can track its status in the "Track Status" tab.` });
     };
 
     const updateStatus = (id, newStatus, extra = {}) => {
@@ -192,6 +229,8 @@ function App() {
         }));
     };
 
+    const [notification, setNotification] = useState(null);
+
     const BackgroundShapes = () => (
         <div className="floating-shapes">
             <div className="shape shape-1"></div>
@@ -203,9 +242,13 @@ function App() {
         <div className="page-container">
             <BackgroundShapes />
 
+            <AnimatePresence>
+                {notification && <NotificationModal notification={notification} onClose={() => setNotification(null)} />}
+            </AnimatePresence>
+
             {view === 'auth' ? (
                 <div className="center-screen">
-                    <AuthScreen onLogin={handleLoginSuccess} />
+                    <AuthScreen onLogin={handleLoginSuccess} notify={setNotification} />
                 </div>
             ) : (
                 <>
@@ -255,10 +298,10 @@ function App() {
 }
 
 // --- Auth Component ---
-const AuthScreen = ({ onLogin }) => {
+const AuthScreen = ({ onLogin, notify }) => {
     const [mode, setMode] = useState('login');
     const [formData, setFormData] = useState({
-        email: '', stdId: '', course: '', department: ''
+        email: '', stdId: '', course: '', department: '', password: ''
     });
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [loading, setLoading] = useState(false);
@@ -270,8 +313,6 @@ const AuthScreen = ({ onLogin }) => {
         return () => clearInterval(interval);
     }, [timer]);
 
-    const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
     const handleOtpChange = (index, value) => {
         if (isNaN(value)) return;
         const newOtp = [...otp];
@@ -280,6 +321,8 @@ const AuthScreen = ({ onLogin }) => {
         if (value && index < 5) document.getElementById(`otp-${index + 1}`).focus();
     };
 
+    const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
     const submitLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -287,7 +330,7 @@ const AuthScreen = ({ onLogin }) => {
         const loginInput = formData.email.trim();
         const passwordInput = formData.stdId.trim();
 
-        // 1. Admin Bypass
+        // Admin/Coord Bypasses (Hiding details)
         if (loginInput === 'admin' && passwordInput === 'admin123') {
             onLogin({ email: 'admin@kluniversity.in', id: 'ADMIN', role: 'admin', name: "System Administrator" });
             setLoading(false); return;
@@ -312,8 +355,10 @@ const AuthScreen = ({ onLogin }) => {
             });
             const data = await res.json();
             if (res.ok) onLogin(data.user);
-            else alert(data.message || "Login Failed");
-        } catch (err) { alert("Login Error: Verify backend is running."); }
+            else notify({ type: 'error', title: 'Login Failed', message: data.message || "Invalid credentials" });
+        } catch (err) {
+            notify({ type: 'error', title: 'Connection Error', message: "Verify backend is running." });
+        }
         setLoading(false);
     };
 
@@ -328,17 +373,29 @@ const AuthScreen = ({ onLogin }) => {
                 body: JSON.stringify({
                     email: formData.email,
                     student_id: formData.stdId,
-                    password: formData.password, // Added
+                    password: formData.password,
                     course: formData.course,
                     department: formData.department
                 })
             });
             const data = await res.json();
-            if (res.ok) { setMode('otp'); setTimer(60); alert(data.message); }
-            else alert(data.message);
+            if (res.ok) {
+                setMode('otp');
+                if (data.dev_otp) {
+                    notify({
+                        type: 'otp',
+                        title: 'Email Delay Backup',
+                        message: data.message,
+                        otp: data.dev_otp
+                    });
+                } else {
+                    notify({ type: 'success', title: 'Code Sent', message: data.message });
+                }
+            } else {
+                notify({ type: 'error', title: 'Registration Failed', message: data.message });
+            }
         } catch (err) {
-            console.error("Signup Error:", err);
-            alert("Registration Connection Error: " + err.message);
+            notify({ type: 'error', title: 'Network Error', message: "Could not reach server. " + err.message });
         }
         setLoading(false);
     };
@@ -346,7 +403,7 @@ const AuthScreen = ({ onLogin }) => {
     const verifyOtp = async (e) => {
         e.preventDefault();
         const code = otp.join('');
-        if (code.length !== 6) return alert("Enter 6-digit OTP");
+        if (code.length !== 6) return notify({ type: 'error', title: 'Incomplete OTP', message: 'Please enter all 6 digits.' });
         setLoading(true);
         try {
             const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -356,14 +413,14 @@ const AuthScreen = ({ onLogin }) => {
             });
             const data = await res.json();
             if (res.ok) {
-                alert("Verification Successful! Logging you in...");
+                notify({ type: 'success', title: 'Success!', message: 'Registration complete. Logging you in...' });
                 const dept = formData.department || 'CSE';
                 onLogin({
                     email: formData.email, id: formData.stdId, role: 'student',
                     name: formData.email.split('@')[0], course: formData.course, department: dept
                 });
-            } else alert(data.message || "Invalid OTP");
-        } catch (err) { alert("Verification Connection Error"); }
+            } else notify({ type: 'error', title: 'Invalid Code', message: data.message || "Please check the OTP and try again." });
+        } catch (err) { notify({ type: 'error', title: 'Verification Error', message: "Connection lost." }); }
         setLoading(false);
     };
 
