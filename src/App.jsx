@@ -250,6 +250,7 @@ function App() {
     };
 
     const [notification, setNotification] = useState(null);
+    const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
     const BackgroundShapes = () => (
         <div className="floating-shapes">
@@ -272,11 +273,17 @@ function App() {
                 </div>
             ) : (
                 <>
-                    <header className="glass-header" style={{
-                        marginLeft: user?.role === 'student' ? 0 : '68px',
-                        width: user?.role === 'student' ? '100%' : 'calc(100% - 68px)',
-                        transition: 'all 0.3s ease'
-                    }}>
+                    <motion.header
+                        className="glass-header"
+                        animate={{
+                            marginLeft: user?.role === 'student' ? 0 : (sidebarExpanded ? '260px' : '80px'),
+                            width: user?.role === 'student' ? '100%' : `calc(100% - ${sidebarExpanded ? '260px' : '80px'})`
+                        }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                        style={{
+                            transition: 'background 0.3s ease'
+                        }}
+                    >
                         <div className="content-wrapper" style={{ flexDirection: 'row', justifyContent: 'space-between', padding: '0.5rem 2rem', maxWidth: 'none', width: '100%' }}>
                             <div className="flex items-center gap-4">
                                 <div style={{ background: 'linear-gradient(to right, #6366f1, #8b5cf6)', padding: '0.5rem', borderRadius: '0.5rem' }}>
@@ -300,7 +307,7 @@ function App() {
                                 </button>
                             </div>
                         </div>
-                    </header>
+                    </motion.header>
 
                     <main className="content-wrapper" style={{
                         maxWidth: 'none',
@@ -308,8 +315,8 @@ function App() {
                         padding: 0
                     }}>
                         {view === 'student' && <StudentDashboard user={user} grievances={grievances} onRaise={raiseGrievance} />}
-                        {view === 'coordinator' && <CoordinatorDashboard user={user} grievances={grievances} onUpdateStatus={updateStatus} />}
-                        {view === 'admin' && <AdminDashboard grievances={grievances} onUpdateStatus={updateStatus} />}
+                        {view === 'coordinator' && <CoordinatorDashboard user={user} grievances={grievances} onUpdateStatus={updateStatus} sidebarExpanded={sidebarExpanded} setSidebarExpanded={setSidebarExpanded} />}
+                        {view === 'admin' && <AdminDashboard grievances={grievances} onUpdateStatus={updateStatus} sidebarExpanded={sidebarExpanded} setSidebarExpanded={setSidebarExpanded} />}
                     </main>
                 </>
             )}
@@ -591,10 +598,9 @@ const StudentDashboard = ({ user, grievances, onRaise }) => {
 };
 
 // --- Coordinator View ---
-const CoordinatorDashboard = ({ user, grievances, onUpdateStatus }) => {
+const CoordinatorDashboard = ({ user, grievances, onUpdateStatus, sidebarExpanded, setSidebarExpanded }) => {
     const [filter, setFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState(null);
-    const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
     // Refresh Mock
     const handleRefresh = () => {
@@ -680,10 +686,9 @@ const CoordinatorDashboard = ({ user, grievances, onUpdateStatus }) => {
 };
 
 // --- Admin View ---
-const AdminDashboard = ({ grievances, onUpdateStatus }) => {
+const AdminDashboard = ({ grievances, onUpdateStatus, sidebarExpanded, setSidebarExpanded }) => {
     const [filter, setFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState(null);
-    const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
     const handleRefresh = () => { setFilter('all'); setDateFilter(null); alert("Data Refreshed"); };
 
