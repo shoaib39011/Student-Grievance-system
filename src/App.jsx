@@ -305,7 +305,7 @@ const AuthScreen = ({ onLogin }) => {
         }
 
         try {
-            const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
             const res = await fetch(`${API_BASE}/api/login`, {
                 method: 'POST', body: JSON.stringify({ login_id: loginInput, password: passwordInput }),
                 headers: { 'Content-Type': 'application/json' }
@@ -321,7 +321,7 @@ const AuthScreen = ({ onLogin }) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
             const res = await fetch(`${API_BASE}/api/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -349,7 +349,7 @@ const AuthScreen = ({ onLogin }) => {
         if (code.length !== 6) return alert("Enter 6-digit OTP");
         setLoading(true);
         try {
-            const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
             const res = await fetch(`${API_BASE}/api/verify-otp`, {
                 method: 'POST', body: JSON.stringify({ email: formData.email, otp: code }),
                 headers: { 'Content-Type': 'application/json' }
