@@ -66,6 +66,10 @@ def check_otp(otp, hashed_otp):
 
 # --- Routes ---
 
+@app.route('/')
+def home():
+    return jsonify({"message": "Backend is running!", "status": "ok"}), 200
+
 @app.before_request
 def setup():
     db.create_all()
