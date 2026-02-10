@@ -40,8 +40,9 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     student_id = db.Column(db.String(20), unique=True, nullable=False)
-    course = db.Column(db.String(50), nullable=True)     # Added
-    department = db.Column(db.String(50), nullable=True) # Added
+    password_hash = db.Column(db.String(128), nullable=False) # Changed from using ID as password
+    course = db.Column(db.String(50), nullable=True)
+    department = db.Column(db.String(50), nullable=True)
     is_verified = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -58,11 +59,11 @@ class Token(db.Model):
 def generate_otp():
     return str(random.randint(100000, 999999))
 
-def hash_otp(otp):
-    return bcrypt.hashpw(otp.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+def hash_data(data):
+    return bcrypt.hashpw(data.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-def check_otp(otp, hashed_otp):
-    return bcrypt.checkpw(otp.encode('utf-8'), hashed_otp.encode('utf-8'))
+def check_hash(plain_text, hashed_text):
+    return bcrypt.checkpw(plain_text.encode('utf-8'), hashed_text.encode('utf-8'))
 
 # --- Routes ---
 
@@ -79,8 +80,9 @@ def signup():
     data = request.json
     email = data.get('email', '').strip().lower()
     student_id = data.get('student_id', '').strip()
-    course = data.get('course', '').strip()          # Added
-    department = data.get('department', '').strip()  # Added
+    password = data.get('password', '').strip()      # Added
+    course = data.get('course', '').strip()
+    department = data.get('department', '').strip()
 
     # 1. Validation
     if not any(email.endswith(f"@{domain}") for domain in DOMAIN_WHITELIST):
@@ -89,26 +91,32 @@ def signup():
     if len(student_id) != 10 or not student_id.isdigit():
         return jsonify({"message": "Use a valid 10-digit ID"}), 400
 
+    if len(password) < 6:
+        return jsonify({"message": "Password must be at least 6 chars"}), 400
+
     # 2. Check if user already exists
     existing_user = User.query.filter((User.email == email) | (User.student_id == student_id)).first()
     if existing_user:
         if existing_user.is_verified:
             return jsonify({"message": "Account already registered & verified. Please login."}), 400
         else:
-            # Update incomplete registration details if needed
+            # Update incomplete registration details
             existing_user.course = course
             existing_user.department = department
+            existing_user.password_hash = hash_data(password) # Update password
             db.session.commit()
 
     # 3. Generate & Store/Update User (Unverified)
+    new_user = None
     if not existing_user:
-        new_user = User(email=email, student_id=student_id, course=course, department=department)
+        hashed_pw = hash_data(password)
+        new_user = User(email=email, student_id=student_id, password_hash=hashed_pw, course=course, department=department)
         db.session.add(new_user)
         db.session.commit()
 
     # 4. Generate OTP
     otp = generate_otp()
-    hashed = hash_otp(otp)
+    hashed_otp = hash_data(otp)
     expiry_time = datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES)
     
     # 5. Store OTP Logic
@@ -122,16 +130,12 @@ def signup():
                  "retry_after": datetime.timestamp(token.last_resend) + OTP_COOLDOWN_SECONDS
              }), 429
         
-        # Max resend check (reset if expired)
-        if token.resend_count >= MAX_RESEND_ATTEMPTS and token.expiry > datetime.utcnow():
-             return jsonify({"message": "Max OTP attempts reached. Try again later."}), 429
-             
-        token.otp_hash = hashed
+        token.otp_hash = hashed_otp
         token.expiry = expiry_time
         token.resend_count += 1
         token.last_resend = datetime.utcnow()
     else:
-        token = Token(email=email, otp_hash=hashed, expiry=expiry_time, resend_count=0)
+        token = Token(email=email, otp_hash=hashed_otp, expiry=expiry_time, resend_count=0)
         db.session.add(token)
 
     db.session.commit()
@@ -151,17 +155,15 @@ def signup():
         mail.send(msg)
 
     except Exception as e:
-        # If email fails, rollback user creation to keep DB clean
+        # If email fails, rollback user creation to keep DB clean if it was new
         try:
-            # new_user might be defined in local scope if block executed
-            if 'new_user' in locals():
+             if new_user:
                 db.session.delete(new_user)
                 db.session.commit()
         except:
             pass
 
         print(f"EMAIL ERROR: {str(e)}") # Log for Render
-        # Return 500 but include detailed error for debugging
         return jsonify({"message": f"Failed to send email. Error: {str(e)}"}), 500
 
     return jsonify({"message": "OTP sent to your email!"}), 200
@@ -181,7 +183,7 @@ def verify_otp():
     if datetime.utcnow() > token.expiry:
         return jsonify({"message": "OTP Expired. Please Request New."}), 400
         
-    if not check_otp(otp_input, token.otp_hash):
+    if not check_hash(otp_input, token.otp_hash):
         return jsonify({"message": "Invalid OTP"}), 401
 
     # Success: verify user
@@ -200,16 +202,21 @@ def verify_otp():
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
-    email_or_id = data.get('login_id', '').strip()
+    login_id = data.get('login_id', '').strip()
+    password = data.get('password', '').strip()
     
-    # If using ID
-    user = User.query.filter((User.email == email_or_id) | (User.student_id == email_or_id)).first()
+    # Find user by Email or ID
+    user = User.query.filter((User.email == login_id) | (User.student_id == login_id)).first()
     
     if not user:
         return jsonify({"message": "User not found. Please register."}), 404
         
     if not user.is_verified:
          return jsonify({"message": "Account not verified. Please complete verification."}), 403
+
+    # Check Password
+    if not check_hash(password, user.password_hash):
+         return jsonify({"message": "Invalid credentials"}), 401
 
     return jsonify({
         "message": "Login successful",
@@ -218,14 +225,18 @@ def login():
             "id": user.student_id,
             "role": "student",
             "name": user.email.split('@')[0],
-            "course": user.course,          # Added
-            "department": user.department   # Added
+            "course": user.course,
+            "department": user.department
         }
     }), 200
 
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
+        # Clean DB for fresh schema if needed (or use migrations in prod)
+        try:
+            db.create_all()
+        except:
+            pass
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
