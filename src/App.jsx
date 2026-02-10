@@ -425,18 +425,26 @@ const AuthScreen = ({ onLogin, notify }) => {
     };
 
     return (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-panel">
+        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }} className="glass-panel">
             <div className="text-center mb-6">
-                <div style={{ margin: '0 auto 1.5rem', width: '80px', height: '80px', background: 'rgba(255,255,255,0.1)', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <motion.div
+                    whileHover={{ rotate: 15, scale: 1.1 }}
+                    style={{ margin: '0 auto 1.5rem', width: '80px', height: '80px', background: 'rgba(255,255,255,0.05)', borderRadius: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <Shield size={40} color="white" />
-                </div>
-                <h1>University Portal</h1>
+                </motion.div>
+                <h1 style={{ background: 'linear-gradient(to bottom, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>University Portal</h1>
                 <p>Official Grievance Redressal System</p>
             </div>
 
             <AnimatePresence mode="wait">
                 {mode === 'login' && (
-                    <motion.form key="login" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} onSubmit={submitLogin}>
+                    <motion.form
+                        key="login"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.1 }}
+                        onSubmit={submitLogin}
+                    >
                         <h2 className="text-center">Welcome Back</h2>
                         <div className="mb-6 space-y-4" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <input name="email" value={formData.email} onChange={handleInputChange} placeholder="University Email / Username" className="input-field" required />
@@ -446,25 +454,31 @@ const AuthScreen = ({ onLogin, notify }) => {
                             {loading ? "Verifying..." : "Login to Portal"}
                         </button>
                         <div className="text-center" style={{ fontSize: '0.9rem' }}>
-                            New Student? <span onClick={() => setMode('register')} style={{ textDecoration: 'underline', cursor: 'pointer', fontWeight: 'bold' }}>Register Here</span>
+                            New Student? <span onClick={() => setMode('register')} style={{ color: '#818cf8', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }}>Register Here</span>
                         </div>
                     </motion.form>
                 )}
 
                 {mode === 'register' && (
-                    <motion.form key="register" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} onSubmit={submitRegister}>
+                    <motion.form
+                        key="register"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.1 }}
+                        onSubmit={submitRegister}
+                    >
                         <h2 className="text-center">Student Registration</h2>
                         <div className="mb-6" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <input name="email" value={formData.email} onChange={handleInputChange} placeholder="University Email" className="input-field" required />
                             <input name="stdId" value={formData.stdId} onChange={handleInputChange} placeholder="Student ID (10 Digits)" maxLength={10} className="input-field" required />
                             <input name="password" type="password" value={formData.password || ''} onChange={handleInputChange} placeholder="Create Password" className="input-field" required minLength={6} />
                             <div style={{ display: 'flex', gap: '1rem' }}>
-                                <select name="course" onChange={handleInputChange} className="input-field" required style={{ color: 'black' }}>
-                                    <option value="">Select Course</option>
+                                <select name="course" onChange={handleInputChange} className="input-field" required style={{ color: 'white' }}>
+                                    <option value="" disabled selected>Select Course</option>
                                     {COURSES.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
-                                <select name="department" onChange={handleInputChange} className="input-field" required style={{ color: 'black' }}>
-                                    <option value="">Select Dept</option>
+                                <select name="department" onChange={handleInputChange} className="input-field" required style={{ color: 'white' }}>
+                                    <option value="" disabled selected>Select Dept</option>
                                     {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                                 </select>
                             </div>
@@ -473,7 +487,7 @@ const AuthScreen = ({ onLogin, notify }) => {
                             {loading ? "Processing..." : "Send Verification Code"}
                         </button>
                         <div className="text-center" style={{ fontSize: '0.9rem' }}>
-                            Already Verified? <span onClick={() => setMode('login')} style={{ textDecoration: 'underline', cursor: 'pointer', fontWeight: 'bold' }}>Login</span>
+                            Already Verified? <span onClick={() => setMode('login')} style={{ color: '#818cf8', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }}>Login</span>
                         </div>
                     </motion.form>
                 )}

@@ -2,11 +2,12 @@
   --primary: #6366f1;
   --primary-light: #818cf8;
   --secondary: #ec4899;
-  --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
   --text-main: #f8fafc;
-  --text-muted: #cbd5e1;
-  --glass-bg: rgba(255, 255, 255, 0.1);
-  --glass-border: rgba(255, 255, 255, 0.2);
+  --text-muted: #94a3b8;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 50%);
 }
 
 * {
@@ -177,27 +178,64 @@ p {
 /* --- Interactive Elements --- */
 .input-field {
   width: 100%;
-  padding: 1rem;
-  border-radius: 0.75rem;
+  padding: 1.25rem;
+  border-radius: 1rem;
   font-size: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   text-align: center;
-  /* Center text inside inputs */
-  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
 }
 
-.input-field::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+/* Reflective Cutout Effect */
+.input-field::after {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  transition: 0.5s;
+  pointer-events: none;
+}
+
+.input-field:hover::after {
+  top: 100%;
+  left: 100%;
+}
+
+.input-field:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.02);
 }
 
 .input-field:focus {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.6);
   border-color: var(--primary-light);
   outline: none;
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);
+  transform: scale(1.02);
+}
+
+/* Premium Select Panel */
+select.input-field {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='Length19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1.5rem center;
+  background-size: 1.2rem;
+  cursor: pointer;
+}
+
+select.input-field option {
+  background: #1e293b;
+  color: white;
+  padding: 1rem;
 }
 
 .btn-primary {
