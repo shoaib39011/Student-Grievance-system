@@ -336,11 +336,36 @@ const AuthScreen = ({ onLogin }) => {
             const data = await res.json();
             if (res.ok) { setMode('otp'); setTimer(60); alert(data.message); }
             else alert(data.message);
-        } catch (err) { alert("Registration Error"); }
+        } catch (err) {
+            console.error("Signup Error:", err);
+            alert("Registration Connection Error: " + err.message);
+        }
         setLoading(false);
     };
 
-    // ... (verifyOtp remains same)
+    const verifyOtp = async (e) => {
+        e.preventDefault();
+        const code = otp.join('');
+        if (code.length !== 6) return alert("Enter 6-digit OTP");
+        setLoading(true);
+        try {
+            const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${API_BASE}/api/verify-otp`, {
+                method: 'POST', body: JSON.stringify({ email: formData.email, otp: code }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert("Verification Successful! Logging you in...");
+                const dept = formData.department || 'CSE';
+                onLogin({
+                    email: formData.email, id: formData.stdId, role: 'student',
+                    name: formData.email.split('@')[0], course: formData.course, department: dept
+                });
+            } else alert(data.message || "Invalid OTP");
+        } catch (err) { alert("Verification Connection Error"); }
+        setLoading(false);
+    };
 
     return (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-panel">

@@ -77,6 +77,18 @@ def home():
 @app.before_request
 def setup():
     db.create_all()
+    # Simple migration for SQLite to add password_hash if missing
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            # Check if password_hash exists
+            res = conn.execute(text("PRAGMA table_info(user)")).fetchall()
+            cols = [r[1] for r in res]
+            if 'password_hash' not in cols:
+                conn.execute(text("ALTER TABLE user ADD COLUMN password_hash VARCHAR(128)"))
+                conn.commit()
+    except Exception as e:
+        print(f"Migration Note: {e}")
 
 @app.route('/api/signup', methods=['POST'])
 def signup():
